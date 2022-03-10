@@ -1,0 +1,156 @@
+You can find my BigQuery queries in this file
+# Data Cleaning
+## Creating New Table for Cleaning
+CREATE TABLE
+  `local-projects-341510.Project1.clean_data` AS
+SELECT
+  *
+FROM
+  `local-projects-341510.Project1.rent_data`;
+## *Merge Tables*
+INSERT INTO
+  `local-projects-341510.Project1.clean_data`( Title,
+    Location,
+    Price,
+    Meter_Square,
+    Number_of_Rooms,
+    Age,
+    Ad_Date,
+    Condition )
+SELECT
+  Title,
+  Location,
+  Price,
+  Meter_Square,
+  Number_of_Rooms,
+  Age,
+  Ad_Date,
+  Condition
+FROM
+  `local-projects-341510.Project1.sale_data`;
+## Find and Replace
+UPDATE
+  `local-projects-341510.Project1.clean_data`
+SET
+  Price = REPLACE(REPLACE(Price, "TL", ""),".",""), 
+  Condition = REPLACE(REPLACE(Condition, "Kiralık                                       Daire", "Rent"),"Satılık                                       Daire", "Sale"),
+  Age = REPLACE(REPLACE(Age, "Yaşında", ""), "Sıfır Bina", "0"),
+  Ad_Date = REPLACE(REPLACE(REPLACE(Ad_Date, " Şubat ", "-2-")," Ocak ", "-1-")," Aralık ", "-12-"),
+  Number_of_Rooms = REPLACE(Number_of_Rooms,"Stüdyo", "1 + 0"),
+  Meter_Square = REPLACE(Meter_Square, "m2", "")
+WHERE
+  TRUE;
+## Split Columns and Trim
+UPDATE
+  `local-projects-341510.Project1.clean_data`
+SET
+  Location = SPLIT(Location, ',')[
+OFFSET
+  (0)]
+WHERE
+  TRUE;
+UPDATE
+  `local-projects-341510.Project1.clean_data`
+  SET
+  Location = TRIM(Location),
+  Title = TRIM(Title)
+  WHERE
+    TRUE;
+## Format Change
+ALTER TABLE
+  `local-projects-341510.Project1.clean_data` ADD COLUMN Price_Num NUMERIC(10),
+  ADD COLUMN Age_Num NUMERIC(10),
+  ADD COLUMN Ad_Date_Date DATE,
+  ADD COLUMN Meter_Num NUMERIC(10);
+UPDATE
+  `local-projects-341510.Project1.clean_data`
+  SET
+  Meter_Num = CAST (Meter_Square AS numeric),
+  Price_Num = CAST (Price AS numeric),
+  Age_Num = CAST (Age AS numeric)
+  WHERE
+    TRUE;
+ALTER TABLE
+  `local-projects-341510.Project1.clean_data` 
+  DROP COLUMN Ad_Date_Date,
+  DROP COLUMN Price,
+  DROP COLUMN Age,
+  DROP COLUMN Meter_Square;
+
+## Ad date Order Change
+ALTER TABLE `local-projects-341510.Project1.clean_data`
+Add column xa string,
+Add column xax string;
+
+UPDATE
+  `local-projects-341510.Project1.clean_data`
+  SET
+  Ad_Date = SPLIT(Ad_Date, '-')[ OFFSET (0)],
+  xa = SPLIT(Ad_Date, '-')[ OFFSET (1)],
+  xax = SPLIT(Ad_Date, '-')[ OFFSET (2)]
+  WHERE
+    TRUE;
+
+UPDATE
+  `local-projects-341510.Project1.clean_data`
+  SET Ad_Date = concat(xax,"-", xa,"-", ad_Date)
+  where true;
+
+Alter table `local-projects-341510.Project1.clean_data`
+Add column advertisement_date date;
+
+UPDATE
+  `local-projects-341510.Project1.clean_data`
+  SET
+  advertisement_date = CAST(Ad_date as DATE)
+  where true;
+
+ALTER TABLE `local-projects-341510.Project1.clean_data`
+  Drop Column xax,
+  Drop Column xa,
+  Drop Column ad_date;
+
+## Data Recovery
+CREATE OR REPLACE TABLE `local-projects-341510.Project1.clean_data` as  SELECT
+  *
+FROM
+  `local-projects-341510.Project1.clean_data`FOR SYSTEM_TIME AS OF
+TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 Hour)
+
+# Data Analysis
+## Create Average Tables
+Create Table `local-projects-341510.Hepsi_Emlak_Web_Scrape_Data.deneme` as 
+SELECT Location,
+avg(Price) as avg_rent
+FROM `local-projects-341510.Hepsi_Emlak_Web_Scrape_Data.cleaned_data` cleaned_data 
+WHERE Condition = "Rent"
+group by Location;
+
+Create Table `local-projects-341510.Hepsi_Emlak_Web_Scrape_Data.deneme2` as 
+SELECT Location,
+avg(Price) as avg_sale
+FROM `local-projects-341510.Hepsi_Emlak_Web_Scrape_Data.cleaned_data` 
+WHERE Condition = "Sale"
+group by Location;
+
+## Merge them together
+ALTER TABLE `local-projects-341510.Hepsi_Emlak_Web_Scrape_Data.deneme`
+ADD Column avg_sale float64;
+
+UPDATE `local-projects-341510.Hepsi_Emlak_Web_Scrape_Data.deneme` deneme
+Set deneme.avg_sale = deneme2.avg_sale
+FROM `local-projects-341510.Hepsi_Emlak_Web_Scrape_Data.deneme2` deneme2
+WHERE deneme.Location = deneme2.Location 
+
+## Percentage Column
+ALTER TABLE `local-projects-341510.Hepsi_Emlak_Web_Scrape_Data.deneme`
+ADD Column percentage float64;
+
+## Percentage Calculation
+UPDATE `local-projects-341510.Hepsi_Emlak_Web_Scrape_Data.deneme` deneme
+Set percentage = avg_rent/avg_sale*60
+WHERE TRUE
+
+## Final Product
+SELECT *
+FROM local-projects-341510.Hepsi_Emlak_Web_Scrape_Data.deneme
