@@ -5,8 +5,6 @@ In this project;
   - I scraped web data by,
   - Cleaned, analysed and created basic plots,
   - Uploaded clean data into BigQuery.
-- With *R*;
-  - Created plots.
 - With *BigQuery* (also for skill testing);
   - Cleaned data in SQL server,
   - Updated and created new tables,
