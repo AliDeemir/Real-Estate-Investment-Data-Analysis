@@ -13,4 +13,6 @@ In this project;
   - Wrote queries.
 - With *Tableau*;
   - Created charts,
-  - Loaded graphical charts into dashboard and published in Tableau Public
+  - Loaded  charts into dashboard and published in Tableau Public
+
+[Tableau Dashboard Link](https://public.tableau.com/app/profile/ali.demir7316/viz/RealEstateInvestmentAnalysisforIzmirTurkeyDashboard/Dashboard1?publish=yes)
